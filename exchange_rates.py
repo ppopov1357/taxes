@@ -9,8 +9,13 @@ cache = {}
 def get_currency_exchange_rate(currency_symbol: str, year, month, day):
     key = f"{year}-{month}-{day}"
 
+    print(f"Getting exchange rate for currency: {currency_symbol} and date: {key}")
+
     if key in cache:
+        print("Exchange rate found in cache")
         return cache[key][currency_symbol]
+
+    print("Getting exchange rate from BNB")
 
     html = requests.get(
         BNB_URL, params={

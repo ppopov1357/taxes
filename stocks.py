@@ -1,13 +1,8 @@
 import csv
+import os
+from decimal import Decimal
 
 import exchange_rates
-
-CURRENCY_RATES = {
-    "USD": 1.73098,
-    "CHF": 1.87484,
-    "EUR": 1.95583,
-    "GBP": 2.28477
-}
 
 
 def get_date(date_string: str) -> tuple[str, str, str]:
@@ -19,9 +14,19 @@ def csv_to_list(csv_path: str) -> list[dict]:
         return list(csv.DictReader(csv_file, delimiter=',', quotechar='|'))
 
 
-def csv_with_bgn_exchange_rate(csv_path: str):
-    market_orders: list[dict] = csv_to_list(csv_path)
+def merge_reports(report_paths: list[str]):
+    merged_report = []
+    for report in report_paths:
+        print(f"merging report: {report}")
+        merged_report.extend(csv_to_list(report))
 
+    return merged_report
+
+
+def csv_with_bgn_exchange_rate(csv_reports: list[str]):
+    market_orders: list[dict] = merge_reports(csv_reports)
+
+    print("Calculating exchange rates...")
     for order in market_orders:
         currency = order['Currency (Price / share)']
         if currency == 'GBX':
@@ -33,52 +38,59 @@ def csv_with_bgn_exchange_rate(csv_path: str):
     return market_orders
 
 
-def csv_to_dict(csv_path: str) -> dict:
-    orders = csv_with_bgn_exchange_rate(csv_path)
+def csv_to_dict(csv_reports: list[str]) -> dict:
+    orders = csv_with_bgn_exchange_rate(csv_reports)
 
     csv_dict = {}
 
     for order in orders:
-        if order['Name'] not in csv_dict:
-            csv_dict[order['Name']] = []
+        key = f"{order['Ticker']}-{order['Name']}"
 
-        csv_dict[order['Name']].append(order)
+        if key not in csv_dict:
+            csv_dict[key] = []
+
+        csv_dict[key].append(order)
 
     return csv_dict
 
 
 def main():
-    market_orders = csv_to_dict('market_orders.csv')
+    csv_reports_path = 'market_orders'
+
+    csv_reports = [os.path.join(csv_reports_path, report) for report in os.listdir(csv_reports_path)]
+    print(csv_reports)
+
+    market_orders = csv_to_dict(csv_reports)
 
     with open('market_orders_aggregated.csv', 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(
-            ['Name', 'Total Quantity', 'Absolute quantity', 'Total Cost', 'Total Cost BGN', 'Average Price', 'Currency', 'Date',
+            ['Name', 'Total Quantity', 'Total Cost', 'Total Cost BGN', 'Average Price', 'Currency',
+             'Date',
              'Average currency rate']
         )
         for stock, market_actions in market_orders.items():
+            print(f"Processing: {stock}")
 
             total_orders = len(market_actions)
-            currency_total = 0
-            total_cost = 0
-            total_quantity = 0
-            absolute_quantity = 0
+            currency_total = Decimal(0)
+            total_cost = Decimal(0)
+            total_quantity = Decimal(0)
             currency = market_actions[0]['Currency (Price / share)']
             date = market_actions[-1]['Time']
             for action in market_actions:
                 is_buy = action['Action'] == 'Market buy'
-                quantity = float(action['No. of shares'])
+                quantity = Decimal(action['No. of shares'])
                 quantity = quantity if is_buy else -quantity
-                price = float(action['Price / share'])
+                price = Decimal(action['Price / share'])
                 total_cost += quantity * price
                 total_quantity += quantity
-                absolute_quantity += abs(quantity)
-                currency_total += float(action['Exchange rate'])
+                currency_total += Decimal(action['Exchange rate'])
+            if total_quantity <= 0:
+                continue
 
-            try:
-                average_price = total_cost / absolute_quantity
-            except ZeroDivisionError:
-                print("here")
+            average_price = total_cost / total_quantity
+
             if currency == 'GBX':
                 total_cost = total_cost / 100
                 average_price = average_price / 100
@@ -88,9 +100,9 @@ def main():
             total_cost = round(total_cost, 2)
             total_cost_bgn = round(total_cost * average_currency_rate, 2)
             total_quantity = round(total_quantity, 3)
-
             writer.writerow(
-                [stock.replace('"', ''), total_quantity, absolute_quantity, total_cost, total_cost_bgn, average_price, currency, date,
+                [stock.replace('"', ''), total_quantity, total_cost, total_cost_bgn, average_price,
+                 currency, date,
                  average_currency_rate]
             )
 
