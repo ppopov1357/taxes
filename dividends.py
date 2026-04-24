@@ -22,7 +22,7 @@ def main():
         for stock, dividend_payed in dividents.items():
             total_dividend = 0
             for dividend in dividend_payed:
-                total_dividend += float(dividend['Total (EUR)'])
+                total_dividend += float(dividend['Total'])
             writer.writerow([stock.replace('"', ""), round(total_dividend, 2)])
 
 

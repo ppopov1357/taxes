@@ -2,6 +2,8 @@ import csv
 import os
 from decimal import Decimal
 
+from dateutil.parser import parse
+
 import exchange_rates
 
 
@@ -71,6 +73,7 @@ def main():
         )
         for stock, market_actions in market_orders.items():
             print(f"Processing: {stock}")
+            market_actions = sorted(market_actions, key=lambda a: parse(a['Time']))
 
             total_orders = len(market_actions)
             currency_total = Decimal(0)
