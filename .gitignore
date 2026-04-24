@@ -4,6 +4,8 @@
 .DS_Store
 __pycache__
 .venv
+/dividends_data/
+/stocks_data/
 /market_orders
 /dividends_data/calculated_dividends.csv
 /stocks_data/market_orders_aggregated.csv
