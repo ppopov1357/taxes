@@ -119,7 +119,10 @@ def main():
             average_price = round(average_price, 2)
             average_currency_rate = round(currency_total / total_orders, 4)
             total_cost = round(total_cost, 2)
-            total_cost_bgn = round(total_cost * average_currency_rate, 2)
+            if currency == 'EUR':
+                total_cost_bgn = round(total_cost * Decimal('1.95583'), 2)
+            else:
+                total_cost_bgn = round(total_cost * average_currency_rate * Decimal('1.95583'), 2)
             total_quantity = round(total_quantity, 3)
             writer.writerow(
                 [stock.replace('"', ''), total_quantity, total_cost, total_cost_bgn, average_price,
