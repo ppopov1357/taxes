@@ -1,10 +1,14 @@
 import csv
 import os
 from decimal import Decimal
+from datetime import datetime
 
 from dateutil.parser import parse
 
 import exchange_rates
+
+
+DATA_DIR = 'stocks_data'
 
 
 def get_date(date_string: str) -> tuple[str, str, str]:
@@ -56,15 +60,29 @@ def csv_to_dict(csv_reports: list[str]) -> dict:
     return csv_dict
 
 
-def main():
-    csv_reports_path = 'market_orders'
+def backup_output(output_path: str, previous_dir: str):
+    if os.path.exists(output_path):
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        basename = os.path.basename(output_path)
+        name, ext = os.path.splitext(basename)
+        backup_name = f'{name}_{timestamp}{ext}'
+        backup_path = os.path.join(previous_dir, backup_name)
+        os.rename(output_path, backup_path)
 
-    csv_reports = [os.path.join(csv_reports_path, report) for report in os.listdir(csv_reports_path)]
+
+def main():
+    market_orders_dir = os.path.join(DATA_DIR, 'market_orders')
+    output_path = os.path.join(DATA_DIR, 'market_orders_aggregated.csv')
+    previous_dir = os.path.join(DATA_DIR, 'previous')
+
+    backup_output(output_path, previous_dir)
+
+    csv_reports = [os.path.join(market_orders_dir, report) for report in os.listdir(market_orders_dir)]
     print(csv_reports)
 
     market_orders = csv_to_dict(csv_reports)
 
-    with open('market_orders_aggregated.csv', 'w', newline='') as f:
+    with open(output_path, 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(
             ['Name', 'Total Quantity', 'Total Cost', 'Total Cost BGN', 'Average Price', 'Currency',
